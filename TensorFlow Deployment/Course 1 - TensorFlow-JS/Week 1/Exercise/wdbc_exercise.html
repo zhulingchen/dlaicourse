@@ -11,17 +11,24 @@
             // HINT: Remember that you are trying to build a classifier that 
             // can predict from the data whether the diagnosis is malignant or benign.
             const trainingData = tf.data.csv(trainingUrl, {
-                
-                // YOUR CODE HERE
-                
+                columnConfigs: {
+                    diagnosis: {
+                        isLabel: true
+                    }
+                }
             });
             
             // Convert the training data into arrays in the space below.
             // Note: In this case, the labels are integers, not strings.
             // Therefore, there is no need to convert string labels into
             // a one-hot encoded array of label values like we did in the
-            // Iris dataset example. 
-            const convertedTrainingData = // YOUR CODE HERE
+            // Iris dataset example.
+            const batch_size = 32;
+            const convertedTrainingData = trainingData.map(
+                ({xs, ys}) => {
+                    return {xs: Object.values(xs), ys: Object.values(ys)};
+                    }
+                ).batch(batch_size);
                   
             const testingUrl = 'wdbc-test.csv';
             
@@ -30,9 +37,11 @@
             // HINT: Remember that you are trying to build a classifier that 
             // can predict from the data whether the diagnosis is malignant or benign.
             const testingData = tf.data.csv(testingUrl, {
-                
-                // YOUR CODE HERE
-                
+                columnConfigs: {
+                    diagnosis: {
+                        isLabel: true
+                    }
+                }
             });
             
             // Convert the testing data into arrays in the space below.
@@ -40,13 +49,16 @@
             // Therefore, there is no need to convert string labels into
             // a one-hot encoded array of label values like we did in the
             // Iris dataset example. 
-            const convertedTestingData = // YOUR CODE HERE
+            const convertedTestingData = testingData.map(
+                ({xs, ys}) => {
+                    return {xs: Object.values(xs), ys: Object.values(ys)};
+                }).batch(batch_size);
                   
 
             // Specify the number of features in the space below.
             // HINT: You can get the number of features from the number of columns
             // and the number of labels in the training data. 
-            const numOfFeatures = // YOUR CODE HERE
+            const numOfFeatures = (await trainingData.columnNames()).length - 1;
             
                 
             // In the space below create a neural network that predicts 1 if the diagnosis is malignant
@@ -58,14 +70,17 @@
             // using ReLu activation functions where applicable. For this dataset only a few
             // hidden layers should be enough to get a high accuracy.  
             const model = tf.sequential();
-            
-            // YOUR CODE HERE
+            model.add(tf.layers.dense({units: 15, inputShape: [numOfFeatures], activation: "relu"}));
+            model.add(tf.layers.dense({units: 5, activation: "relu"}));
+            model.add(tf.layers.dense({units: 1, activation: "sigmoid"}));
+            model.summary();
 
             
             
             // Compile the model using the binaryCrossentropy loss, 
-            // the rmsprop optimizer, and accuracy for your metrics. 
-            model.compile(// YOUR CODE HERE);
+            // the rmsprop optimizer, and accuracy for your metrics.
+            const lr = 1e-3;
+            model.compile({loss: "binaryCrossentropy", metrics: "accuracy", optimizer: tf.train.rmsprop(lr)});
             
             
             await model.fitDataset(convertedTrainingData, 
@@ -73,13 +88,13 @@
                               validationData: convertedTestingData,
                               callbacks:{
                                   onEpochEnd: async(epoch, logs) =>{
-                                      console.log("Epoch: " + epoch + " Loss: " + logs.loss + " Accuracy: " + logs.acc);
+                                      console.log("Epoch: " + epoch + " Loss: " + logs.loss.toFixed(4) + " Accuracy: " + logs.acc.toFixed(4) 
+                                                + " Val_loss: " + logs.val_loss.toFixed(4) + " Val_accuracy: " + logs.val_acc.toFixed(4));
                                   }
                               }});
             await model.save('downloads://my_model');
         }
         run();
     </script>
-<body>
-</body>
+<body></body>
 </html>
