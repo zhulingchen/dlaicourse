@@ -16,11 +16,18 @@ function getModel() {
     model = tf.sequential();
     
     // YOUR CODE HERE
-    
+    model.add(tf.layers.conv2d({inputShape: [28, 28, 1], kernelSize: 3, filters: 16, activation: 'relu', padding: 'same'}));
+	model.add(tf.layers.maxPooling2d({poolSize: [2, 2]}));
+	model.add(tf.layers.conv2d({filters: 32, kernelSize: 3, activation: 'relu', padding: 'same'}));
+	model.add(tf.layers.maxPooling2d({poolSize: [2, 2]}));
+	model.add(tf.layers.flatten());
+	model.add(tf.layers.dense({units: 256, activation: 'relu'}));
+	model.add(tf.layers.dense({units: 10, activation: 'softmax'}));
     
     // Compile the model using the categoricalCrossentropy loss,
     // the tf.train.adam() optimizer, and accuracy for your metrics.
-    model.compile(// YOUR CODE HERE);
+    const lr = 1e-3;
+    model.compile({optimizer: tf.train.adam(lr), loss: 'categoricalCrossentropy', metrics: ['accuracy']});
     
     return model;
 }
@@ -28,17 +35,17 @@ function getModel() {
 async function train(model, data) {
         
     // Set the following metrics for the callback: 'loss', 'val_loss', 'acc', 'val_acc'.
-    const metrics = // YOUR CODE HERE    
+    const metrics = ['loss', 'val_loss', 'acc', 'val_acc']    
 
         
     // Create the container for the callback. Set the name to 'Model Training' and 
     // use a height of 1000px for the styles. 
-    const container = // YOUR CODE HERE   
+    const container = {name: 'Model Training', styles: {height: '1000px'}};
     
     
     // Use tfvis.show.fitCallbacks() to setup the callbacks. 
     // Use the container and metrics defined above as the parameters.
-    const fitCallbacks = // YOUR CODE HERE
+    const fitCallbacks = tfvis.show.fitCallbacks(container, metrics);
     
     const BATCH_SIZE = 512;
     const TRAIN_DATA_SIZE = 6000;
@@ -47,19 +54,31 @@ async function train(model, data) {
     // Get the training batches and resize them. Remember to put your code
     // inside a tf.tidy() clause to clean up all the intermediate tensors.
     // HINT: Take a look at the MNIST example.
-    const [trainXs, trainYs] = // YOUR CODE HERE
+    const [trainXs, trainYs] = tf.tidy(() => {
+		const d = data.nextTrainBatch(TRAIN_DATA_SIZE);
+		return [
+			d.xs.reshape([TRAIN_DATA_SIZE, 28, 28, 1]),
+			d.labels
+		];
+	});
 
     
     // Get the testing batches and resize them. Remember to put your code
     // inside a tf.tidy() clause to clean up all the intermediate tensors.
     // HINT: Take a look at the MNIST example.
-    const [testXs, testYs] = // YOUR CODE HERE
+    const [testXs, testYs] = tf.tidy(() => {
+		const d = data.nextTestBatch(TEST_DATA_SIZE);
+		return [
+			d.xs.reshape([TEST_DATA_SIZE, 28, 28, 1]),
+			d.labels
+		];
+	});
 
     
     return model.fit(trainXs, trainYs, {
         batchSize: BATCH_SIZE,
         validationData: [testXs, testYs],
-        epochs: 10,
+        epochs: 20,
         shuffle: true,
         callbacks: fitCallbacks
     });
